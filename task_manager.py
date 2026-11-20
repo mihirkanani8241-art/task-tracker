@@ -1,9 +1,10 @@
 
 from datetime import datetime
+
 from storage import load_tasks, save_tasks
 
 
-VALID_STATUSES = ["todo", "in-progress", "done"]
+VALID_STATUSES = ("todo", "in-progress", "done")
 
 
 def current_time():
@@ -18,14 +19,20 @@ def add_task(description):
         return
 
     tasks = load_tasks()
-    new_id = max((task["id"] for task in tasks), default=0) + 1
+
+    new_id = max(
+        (task["id"] for task in tasks),
+        default=0
+    ) + 1
+
+    timestamp = current_time()
 
     task = {
         "id": new_id,
         "description": description,
         "status": "todo",
-        "createdAt": current_time(),
-        "updatedAt": current_time()
+        "createdAt": timestamp,
+        "updatedAt": timestamp
     }
 
     tasks.append(task)
@@ -35,10 +42,17 @@ def add_task(description):
 
 
 def list_tasks(status=None):
+    if status and status not in VALID_STATUSES:
+        print("Error: Invalid status.")
+        return
+
     tasks = load_tasks()
 
     if status:
-        tasks = [task for task in tasks if task["status"] == status]
+        tasks = [
+            task for task in tasks
+            if task["status"] == status
+        ]
 
     if not tasks:
         print("No tasks found.")
@@ -53,18 +67,19 @@ def list_tasks(status=None):
 
 
 def update_task(task_id, description):
+    description = description.strip()
+
+    if not description:
+        print("Error: Description cannot be empty.")
+        return
+
     tasks = load_tasks()
 
     for task in tasks:
         if task["id"] == task_id:
-            description = description.strip()
-
-            if not description:
-                print("Error: Description cannot be empty.")
-                return
-
             task["description"] = description
             task["updatedAt"] = current_time()
+
             save_tasks(tasks)
 
             print(f"Task {task_id} updated successfully.")
@@ -80,6 +95,7 @@ def delete_task(task_id):
         if task["id"] == task_id:
             tasks.remove(task)
             save_tasks(tasks)
+
             print(f"Task {task_id} deleted successfully.")
             return
 
@@ -97,6 +113,7 @@ def change_status(task_id, status):
         if task["id"] == task_id:
             task["status"] = status
             task["updatedAt"] = current_time()
+
             save_tasks(tasks)
 
             print(f"Task {task_id} marked as {status}.")

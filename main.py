@@ -9,24 +9,74 @@ from task_manager import (
     change_status
 )
 
+from storage import StorageError
 
-def main():
-    args = sys.argv[1:]
+
+VALID_STATUSES = ("todo", "in-progress", "done")
+
+
+def show_help():
+    print("""
+Task Tracker CLI
+
+Commands:
+
+  add <description>
+      Add a new task.
+
+  list
+      List all tasks.
+
+  list <status>
+      Filter tasks by status.
+
+  update <id> <description>
+      Update a task description.
+
+  delete <id>
+      Delete a task.
+
+  mark-in-progress <id>
+      Mark a task as in progress.
+
+  mark-done <id>
+      Mark a task as completed.
+
+  help
+      Show this help message.
+
+Available statuses: todo, in-progress, done
+""")
+
+
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
 
     if not args:
-        print("Usage: python main.py <command>")
+        show_help()
         return
 
     command = args[0]
 
     try:
-        if command == "add":
+        if command == "help":
+            show_help()
+
+        elif command == "add":
+            if len(args) < 2:
+                print('Usage: python main.py add "description"')
+                return
+
             add_task(" ".join(args[1:]))
 
         elif command == "list":
-            status = args[1] if len(args) > 1 else None
+            if len(args) > 2:
+                print("Error: Too many arguments.")
+                return
 
-            if status and status not in ["todo", "in-progress", "done"]:
+            status = args[1] if len(args) == 2 else None
+
+            if status and status not in VALID_STATUSES:
                 print("Error: Invalid status.")
                 return
 
@@ -37,21 +87,44 @@ def main():
                 print('Usage: python main.py update <id> "description"')
                 return
 
-            update_task(int(args[1]), " ".join(args[2:]))
+            task_id = int(args[1])
+            update_task(task_id, " ".join(args[2:]))
 
         elif command == "delete":
-            delete_task(int(args[1]))
+            if len(args) != 2:
+                print("Usage: python main.py delete <id>")
+                return
 
-        elif command in ["mark-in-progress", "mark-done"]:
             task_id = int(args[1])
-            status = "in-progress" if command == "mark-in-progress" else "done"
+            delete_task(task_id)
+
+        elif command in ("mark-in-progress", "mark-done"):
+            if len(args) != 2:
+                print(f"Usage: python main.py {command} <id>")
+                return
+
+            task_id = int(args[1])
+
+            status = (
+                "in-progress"
+                if command == "mark-in-progress"
+                else "done"
+            )
+
             change_status(task_id, status)
 
         else:
             print(f"Unknown command: {command}")
+            print("Run 'python main.py help' for available commands.")
 
-    except (ValueError, IndexError):
-        print("Error: Invalid or missing task ID.")
+    except ValueError:
+        print("Error: Task ID must be a valid integer.")
+
+    except StorageError as error:
+        print(f"Storage error: {error}")
+
+    except OSError as error:
+        print(f"File operation error: {error}")
 
 
 if __name__ == "__main__":
